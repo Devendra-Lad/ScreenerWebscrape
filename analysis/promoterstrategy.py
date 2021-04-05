@@ -25,6 +25,7 @@ from external.nse import NSE
 # promoter_sold BOOL,
 # secVal REAL,
 # secAcq REAL,
+# lpd TEXT,
 # PRIMARY KEY(date, symbol))
 # ''')
 DATE = 'date'
