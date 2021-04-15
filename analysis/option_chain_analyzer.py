@@ -39,7 +39,6 @@ OPEN_INTEREST = 'openInterest'
 STRIKE_PRICE = 'strikePrice'
 TOTAL_TRADED_VOLUME = 'totalTradedVolume'
 
-
 # Index Funds
 indices = ['NIFTY', 'BANKNIFTY']
 
@@ -229,6 +228,8 @@ def analyze_option_chain(symbol):
         os.mkdir('../data/optionchain/' + today)
     if not os.path.exists('../data/optionchain/' + today + '/' + symbol):
         os.mkdir('../data/optionchain/' + today + '/' + symbol)
+    if not os.path.exists('../data/optionchain/' + today + '/' + symbol + '/sentiment'):
+        os.mkdir('../data/optionchain/' + today + '/' + symbol + '/sentiment')
     if symbol in indices:
         option_chain = nse.fetch_index_chain_data(symbol)
     else:
@@ -236,8 +237,9 @@ def analyze_option_chain(symbol):
     hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
     create_expiry_wise_view(hd_option_chain_df).to_csv(path + '/total_oi_expiry_wise_view.csv', index=False)
     max_oi_buildup(hd_option_chain_df).to_csv(path + '/max_oi_build.csv', index=False)
-    expiry_sentiment_analysis('31'
-                              '-Dec-2020', hd_option_chain_df).to_csv(path + '/sentiment.csv', index=False)
+    expiries = hd_option_chain_df.expiryDate.unique()
+    for expiry in expiries :
+        expiry_sentiment_analysis(expiry, hd_option_chain_df).to_csv(path + '/sentiment/' + expiry + '.csv', index=False)
     stock_price = option_chain['records']['underlyingValue']
     iv_analysis(stock_price, hd_option_chain_df).to_csv(path + '/iv_analysis.csv', index=False)
 
