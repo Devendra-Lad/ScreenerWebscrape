@@ -5,7 +5,7 @@ import sqlite3
 
 nse = NSE()
 
-connect = sqlite3.connect("../data/moneyflow.db")
+connect = sqlite3.connect("../data/database.db")
 records = nse.fetch_index_chain_data('NIFTY')['records']
 option_chain_date = datetime.strptime(records['timestamp'], '%d-%b-%Y %H:%M:%S').date()
 expiry_dates = records['expiryDates']

@@ -93,8 +93,32 @@ promoter_trading_frame[PREMIUM] = (promoter_trading_frame[CURR_PRICE] - promoter
 promoter_trading_frame[STOP_LOSS] = promoter_trading_frame[PROMOTER_PRICE] - 0.05 * promoter_trading_frame[PROMOTER_PRICE]
 promoter_trading_frame = promoter_trading_frame.sort_values(by=PREMIUM, ascending=False, na_position='first')
 
-connect = sqlite3.connect("../data/moneyflow.db")
+connect = sqlite3.connect("../data/database.db")
 cursor = connect.cursor()
+
+
+# cursor.execute('''
+# DROP TABLE IF EXISTS PROMOTER
+# ''')
+# cursor.execute('''
+# CREATE TABLE PROMOTER (
+# date TEXT NOT NULL,
+# symbol REAL NOT NULL,
+# promoter_price REAL,
+# curr_price REAL,
+# premium REAL,
+# max_entry_price REAL,
+# stop_loss REAL,
+# promoter_holding REAL,
+# mf_sell REAL,
+# pledged REAL,
+# eps REAL,
+# promoter_sold BOOL,
+# secVal REAL,
+# secAcq REAL,
+# lpd TEXT,
+# PRIMARY KEY(date, symbol))
+# ''')
 
 for i, row in promoter_trading_frame.iterrows():
     premium = round(row[PREMIUM], 2)

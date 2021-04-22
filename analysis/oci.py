@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pytz
 from pandas.tseries.offsets import BDay
 
-connect = sqlite3.connect("../data/moneyflow.db")
+connect = sqlite3.connect("../data/database.db")
 
 cursor = connect.cursor()
 

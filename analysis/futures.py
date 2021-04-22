@@ -3,7 +3,7 @@ import sqlite3
 
 nse = NSE()
 
-connect = sqlite3.connect("../data/moneyflow.db")
+connect = sqlite3.connect("../data/database.db")
 
 cursor = connect.cursor()
 

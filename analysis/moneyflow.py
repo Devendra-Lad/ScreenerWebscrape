@@ -20,7 +20,7 @@ category_date, bank_nse, dfi_nse, prop_nse, retail_nse = nse.fetch_category_turn
 dii_date, retail_bse, nri_bse, prop_bse, dii_bse = bse.fetch_bse_data(0)
 mfi_date, mfi_sebi = sebi.fetch_latest_mfi()
 
-connect = sqlite3.connect("../data/moneyflow.db")
+connect = sqlite3.connect("../data/database.db")
 c = connect.cursor()
 c.execute("INSERT INTO FLOW_BY_DATE (date, fii_nsdl) VALUES (?, ?) "
           "ON CONFLICT(date) DO UPDATE SET fii_nsdl=? WHERE date=?", (fii_date.date(), fii_nsdl, fii_nsdl, fii_date.date(),))
