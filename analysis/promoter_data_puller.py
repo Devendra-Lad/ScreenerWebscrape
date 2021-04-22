@@ -6,28 +6,6 @@ import sqlite3
 
 from external.nse import NSE
 
-# cursor.execute('''
-# DROP TABLE IF EXISTS PROMOTER
-# ''')
-# cursor.execute('''
-# CREATE TABLE PROMOTER (
-# date TEXT NOT NULL,
-# symbol REAL NOT NULL,
-# promoter_price REAL,
-# curr_price REAL,
-# premium REAL,
-# max_entry_price REAL,
-# stop_loss REAL,
-# promoter_holding REAL,
-# mf_sell REAL,
-# pledged REAL,
-# eps REAL,
-# promoter_sold BOOL,
-# secVal REAL,
-# secAcq REAL,
-# lpd TEXT,
-# PRIMARY KEY(date, symbol))
-# ''')
 DATE = 'date'
 STOP_LOSS = 'stop_loss'
 PREMIUM = 'premium'
@@ -95,31 +73,6 @@ promoter_trading_frame = promoter_trading_frame.sort_values(by=PREMIUM, ascendin
 
 connect = sqlite3.connect("../data/database.db")
 cursor = connect.cursor()
-
-
-# cursor.execute('''
-# DROP TABLE IF EXISTS PROMOTER
-# ''')
-# cursor.execute('''
-# CREATE TABLE PROMOTER (
-# date TEXT NOT NULL,
-# symbol REAL NOT NULL,
-# promoter_price REAL,
-# curr_price REAL,
-# premium REAL,
-# max_entry_price REAL,
-# stop_loss REAL,
-# promoter_holding REAL,
-# mf_sell REAL,
-# pledged REAL,
-# eps REAL,
-# promoter_sold BOOL,
-# secVal REAL,
-# secAcq REAL,
-# lpd TEXT,
-# PRIMARY KEY(date, symbol))
-# ''')
-
 for i, row in promoter_trading_frame.iterrows():
     premium = round(row[PREMIUM], 2)
     pledged = round(row[PLEDGED], 2)
