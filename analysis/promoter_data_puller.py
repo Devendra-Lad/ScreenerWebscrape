@@ -77,7 +77,7 @@ promoter_sold_stocks = seller_trading_frame.symbol.unique()
 
 promoter_trading_frame = promoter_trading_frame.loc[promoter_trading_frame.acqMode == MARKET_PURCHASE]
 promoter_trading_frame = promoter_trading_frame[[SYMBOL, SEC_VAL, SEC_ACQ]]
-promoter_trading_frame = promoter_trading_frame.astype({SEC_VAL: 'int', SEC_ACQ: 'int'})
+promoter_trading_frame = promoter_trading_frame.astype({SEC_VAL: 'float', SEC_ACQ: 'float'})
 promoter_trading_frame = promoter_trading_frame.groupby(SYMBOL, as_index=False).agg({SEC_VAL: 'sum', SEC_ACQ: 'sum'})
 promoter_trading_frame = promoter_trading_frame.loc[promoter_trading_frame.secVal >= 10000000]
 promoter_trading_frame[PROMOTER_PRICE] = promoter_trading_frame[SEC_VAL] / promoter_trading_frame[SEC_ACQ]
