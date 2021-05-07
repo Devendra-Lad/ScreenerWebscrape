@@ -9,20 +9,11 @@ pd.options.mode.chained_assignment = None
 
 pd.set_option('display.max_columns', 500)
 
+# Not working anymore
 nse = NSE()
 
-# TODO correct this for loop
-# bhav_copies = []
-# days = []
-#
 range_start = 0
 range_end = 3
-
-# for i in range(range_start, range_end):
-#     bhav_copy = nse.fetch_eq_bhav_copy(i)
-#     bhav_copy = bhav_copy.loc[bhav_copy.SERIES == 'EQ', :]
-#     bhav_copies.append(bhav_copy)
-#     days.append(i)
 
 days = [0, 1, 2, 3]
 
@@ -35,7 +26,6 @@ final_copy = pd.concat([bv1, bv2, bv3, bv4], keys=days, names=['DAY', 'SYMBOL'])
 
 print(final_copy)
 final_copy = final_copy.swaplevel(0, 1).sort_index(axis=0)
-# final_copy = final_copy.swaplevel(0, 1).sort_index(axis=0)
 
 print(final_copy)
 
@@ -105,6 +95,5 @@ delivery_analysis.to_csv('../data/eq-delivery/' + today + '/delivery.csv', index
 price_ = delivery_analysis.loc[(delivery_analysis.delivery == 1) & (delivery_analysis.price == 1) & (delivery_analysis.qty == 1), :]
 price_ = price_.sort_values(by='close_price', ascending=False)
 price_.to_csv('../data/eq-delivery/' + today + '/price.csv', index=False)
-#
 
 # covert into sql

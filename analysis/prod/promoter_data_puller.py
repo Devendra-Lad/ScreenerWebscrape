@@ -71,7 +71,7 @@ promoter_trading_frame[PREMIUM] = (promoter_trading_frame[CURR_PRICE] - promoter
 promoter_trading_frame[STOP_LOSS] = promoter_trading_frame[PROMOTER_PRICE] - 0.05 * promoter_trading_frame[PROMOTER_PRICE]
 promoter_trading_frame = promoter_trading_frame.sort_values(by=PREMIUM, ascending=False, na_position='first')
 
-connect = sqlite3.connect("../data/database.db")
+connect = sqlite3.connect("data/database.db")
 cursor = connect.cursor()
 for i, row in promoter_trading_frame.iterrows():
     premium = round(row[PREMIUM], 2)
