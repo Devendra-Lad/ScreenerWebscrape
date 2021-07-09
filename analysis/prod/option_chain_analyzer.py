@@ -2,6 +2,7 @@ import math
 import os
 import sqlite3
 from datetime import datetime, timedelta
+import time
 
 import pandas as pd
 import pytz
@@ -41,7 +42,7 @@ STRIKE_PRICE = 'strikePrice'
 TOTAL_TRADED_VOLUME = 'totalTradedVolume'
 
 # Index Funds
-indices = ['NIFTY', 'BANKNIFTY']
+indices = ['NIFTY', 'BANKNIFTY', 'FINNIFTY']
 
 # User Defined Columns
 PRICE = 'price'
@@ -83,7 +84,7 @@ def get_total_oi(option_chain_df):
         {OPEN_INTEREST: 'sum', TOTAL_TRADED_VOLUME: 'sum'})
 
 
-def create_expiry_wise_view(symbol, option_chain_df):
+def pcr_analysis(symbol, option_chain_df):
     today = datetime.strftime(datetime.now(pytz.timezone('Asia/Kolkata')), '%Y-%m-%d')
     total_oi_data = get_total_oi(option_chain_df)
     expiries = total_oi_data.expiryDate.unique()
@@ -118,6 +119,7 @@ def create_expiry_wise_view(symbol, option_chain_df):
                             today, symbol, expiry_date))
     connect.commit()
     connect.close()
+
 
 def analyze_sentiment(option_chain_single_record):
     sentiment = 'unknown'
@@ -220,17 +222,18 @@ def iv_analysis(symbol, stock_price, option_chain_df):
                 SET spot=?, iv_view=?, ub=?, lb=?, cep=?, pep=?, ceiv=?, peiv=? 
                 WHERE date=? AND symbol=? AND expiry=?''',
                            (today, symbol, expiry_date,
-                            stock_price, market_sentiment, max_oi_ce_strike, max_oi_pe_strike, ce_win_prob_cdf, pe_win_prob_cdf, ce_optimal_iv, pe_optimal_iv,
-                            stock_price, market_sentiment, max_oi_ce_strike, max_oi_pe_strike, ce_win_prob_cdf, pe_win_prob_cdf, ce_optimal_iv, pe_optimal_iv,
+                            stock_price, market_sentiment, max_oi_ce_strike, max_oi_pe_strike, ce_win_prob_cdf,
+                            pe_win_prob_cdf, ce_optimal_iv, pe_optimal_iv,
+                            stock_price, market_sentiment, max_oi_ce_strike, max_oi_pe_strike, ce_win_prob_cdf,
+                            pe_win_prob_cdf, ce_optimal_iv, pe_optimal_iv,
                             today, symbol, expiry_date))
     connect.commit()
     connect.close()
 
+
 # Main Code Starts Here
 # Buy at OTM
 # Shorts at ATM
-# TODO code is not working in current revision
-# TODO move data to SQL or Google Sheets.
 def analyze_option_chain(symbol):
     today = datetime.strftime(datetime.now(pytz.timezone('Asia/Kolkata')), '%d-%m-%Y-%H')
     path = 'data/optionchain/' + today + '/' + symbol
@@ -244,10 +247,15 @@ def analyze_option_chain(symbol):
         option_chain = nse.fetch_index_chain_data(symbol)
     else:
         option_chain = nse.fetch_equity_chain_data(symbol)
+
     stock_price = option_chain['records']['underlyingValue']
     hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
     iv_analysis(symbol, stock_price, hd_option_chain_df)
-    create_expiry_wise_view(symbol, hd_option_chain_df)
+    pcr_analysis(symbol, hd_option_chain_df)
 
 
-analyze_option_chain('BANKNIFTY')
+derivative_equities = nse.list_of_derivatives()
+for symbol in derivative_equities:
+    print("processing " + symbol)
+    analyze_option_chain(symbol)
+

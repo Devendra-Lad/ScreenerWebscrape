@@ -50,20 +50,13 @@ class NSE:
         self.nse_session.get('http://www.nseindia.com', headers=self.headers)
 
     def fetch_data(self, url):
-        # time.sleep(2)
-        print('External Call')
-        print(url)
         return self.nse_session.get(url=url, headers=self.headers).text
 
     def fetch_files(self, url):
-        # time.sleep(2)
-        print('External Call')
-        print(url)
         return self.nse_session.get(url=url, headers=self.headers).content
 
     def fetch_index_stock_data(self, index):
         url = 'https://www.nseindia.com/api/equity-stockIndices?index=' + index
-        stocks = []
         try:
            return json.loads(self.fetch_data(url))
         except:
@@ -72,8 +65,7 @@ class NSE:
         return self.fetch_index_stock_data(index)
 
     def fetch_index_chain_data(self, symbol):
-        encode = quote(symbol)
-        url = 'https://www.nseindia.com/api/option-chain-indices?symbol=' + encode
+        url = 'https://www.nseindia.com/api/option-chain-indices?symbol=' + quote(symbol)
         try:
             return json.loads(self.fetch_data(url))
         except:
@@ -82,8 +74,7 @@ class NSE:
             return self.fetch_index_chain_data(symbol)
 
     def fetch_equity_chain_data(self, symbol):
-        encode = quote(symbol)
-        url = 'https://www.nseindia.com/api/option-chain-equities?symbol=' + encode
+        url = 'https://www.nseindia.com/api/option-chain-equities?symbol=' + quote(symbol)
         try:
             return json.loads(self.fetch_data(url))
         except:
@@ -93,8 +84,7 @@ class NSE:
 
     @lru_cache
     def fetch_stock_quotes(self, symbol):
-        encode = quote(symbol)
-        url = 'https://www.nseindia.com/api/quote-equity?symbol=' + encode
+        url = 'https://www.nseindia.com/api/quote-equity?symbol=' + quote(symbol)
         try:
             return json.loads(self.fetch_data(url))
         except:
@@ -104,18 +94,18 @@ class NSE:
 
     @lru_cache
     def fetch_stock_corp_data(self, symbol):
-        encode = quote(symbol)
-        url = 'https://www.nseindia.com/api/quote-equity?symbol=' + encode + '&section=corp_info'
+        url = 'https://www.nseindia.com/api/quote-equity?symbol=' + quote(symbol) + '&section=corp_info'
         try:
             return json.loads(self.fetch_data(url))
         except:
-            print('Retrying Corp Data ')
+            print('Retrying Corp Data')
             print(symbol)
             return self.fetch_stock_corp_data(symbol)
 
     def fetch_close_price(self, symbol):
         try:
-            return self.fetch_stock_quotes(symbol)['priceInfo']['lastPrice']
+            quotes = self.fetch_stock_quotes(symbol)
+            return quotes['priceInfo']['lastPrice']
         except:
             print('Retrying : Fetch Close Price')
             print(symbol)
@@ -259,3 +249,36 @@ class NSE:
             csv_file.close()
             with open(file_local_url, newline='') as csvfile:
                 return category_date, [row for row in csv.reader(csvfile, delimiter=',', quotechar='|')]
+
+
+    def list_of_equities(self):
+        url = 'https://archives.nseindia.com/content/equities/EQUITY_L.csv'
+        file_local_url = 'data/equities/e_list.csv'
+        if os.path.exists(file_local_url):
+            os.remove(file_local_url)
+        content = self.fetch_files(url)
+        csv_file = open(file_local_url, 'wb')
+        csv_file.write(content)
+
+        with open(file_local_url, newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+            next(reader)
+            return [row[0].strip() for row in reader]
+
+    def list_of_derivatives(self):
+        url = 'https://archives.nseindia.com/content/fo/fo_mktlots.csv'
+        file_local_url = 'data/equities/d_list.csv'
+        if os.path.exists(file_local_url):
+            os.remove(file_local_url)
+        content = self.fetch_files(url)
+        csv_file = open(file_local_url, 'wb')
+        csv_file.write(content)
+        option_list = []
+        with open(file_local_url, newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+            next(reader)
+            for row in reader:
+                if row[1].strip() == 'Symbol':
+                    continue
+                option_list.append(row[1].strip())
+        return option_list
