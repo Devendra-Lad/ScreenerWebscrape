@@ -284,7 +284,7 @@ def delta_strategy(symbol, hd_option_chain):
                         atm_min_diff = delta_diff
                         atm_strike = row.strikePrice
                         atm_last_price = row.lastPrice
-                if row.delta is not None :
+                if row.delta is not None:
                     if row.optiontype == PE:
                         delta_diff = abs(abs(row.delta) * 100 - 25.0)
                         if delta_diff < pe_25_min_dff:
@@ -302,13 +302,13 @@ def delta_strategy(symbol, hd_option_chain):
             pe_price_diff = abs(atm_last_price - pe_25_last_price)
             ds_pe_profit = 0
             if pe_price_diff != 0 and pe_strike_diff != 0:
-                ds_pe_profit = pe_price_diff/pe_strike_diff * 100
+                ds_pe_profit = pe_price_diff / pe_strike_diff * 100
 
             ce_strike_diff = abs(ce_25_strike - atm_strike)
             ce_price_diff = abs(atm_last_price - ce_25_last_price)
             ds_ce_profit = 0
             if ce_price_diff != 0 and ce_strike_diff != 0:
-                ds_ce_profit = ce_price_diff/ce_strike_diff * 100
+                ds_ce_profit = ce_price_diff / ce_strike_diff * 100
 
             cursor.execute('''
                 INSERT INTO OPTION_ANALYSIS 
@@ -358,3 +358,4 @@ for symbol in derivative_equities:
     print("processing " + symbol)
     analyze_option_chain(symbol)
 
+# TODO Thousand Feet View for NIFTY Options
