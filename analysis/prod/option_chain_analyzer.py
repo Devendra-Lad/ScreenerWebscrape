@@ -2,8 +2,9 @@ import math
 import os
 import sqlite3
 from datetime import datetime, timedelta
-import time
+import sys
 
+import mibian
 import pandas as pd
 import pytz
 from scipy.stats import norm
@@ -231,6 +232,101 @@ def iv_analysis(symbol, stock_price, option_chain_df):
     connect.close()
 
 
+def delta_calculation(option_chain_row, underlyingValue, interest_rate, time_till_expiry):
+    if option_chain_row.optiontype == PE:
+        volatility = mibian.BS(
+            [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
+            putPrice=option_chain_row.lastPrice).impliedVolatility
+        return mibian.BS(
+            [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
+            volatility).putDelta
+    else:
+        volatility = mibian.BS(
+            [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
+            callPrice=option_chain_row.lastPrice).impliedVolatility
+        return mibian.BS(
+            [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
+            volatility).callDelta
+
+
+def delta_strategy(symbol, hd_option_chain):
+    today_datetime = datetime.now(pytz.timezone('Asia/Kolkata'))
+    today = datetime.strftime(datetime.now(pytz.timezone('Asia/Kolkata')), '%Y-%m-%d')
+    interest_rate = 10
+    expiry_date_uniques = hd_option_chain.expiryDate.unique()
+    connect = sqlite3.connect("data/database.db")
+    cursor = connect.cursor()
+    for expiry in expiry_date_uniques:
+        expiry_date = datetime.strftime(datetime.strptime(expiry, '%d-%b-%Y'), '%Y-%m-%d')
+        end_expiry_date = today_datetime + timedelta(days=45)
+        expiry_datetime = datetime.strptime(expiry + '-15-30-+0530', '%d-%b-%Y-%H-%M-%z')
+        underlying_value = hd_option_chain.to_dict('records')[0]['underlyingValue']
+        if expiry_datetime <= end_expiry_date:
+            time_till_expiry = (expiry_datetime - today_datetime).total_seconds() / (60 * 60 * 24)
+            expiry_option_chain = hd_option_chain.loc[hd_option_chain.expiryDate == expiry]
+            expiry_option_chain['delta'] = expiry_option_chain.apply(
+                lambda row: delta_calculation(row, underlying_value, interest_rate, time_till_expiry), axis=1)
+
+            atm_min_diff = sys.maxsize
+            atm_strike = underlying_value
+            atm_last_price = 0
+
+            pe_25_min_dff = sys.maxsize
+            pe_25_strike = underlying_value
+            pe_25_last_price = 0
+
+            ce_25_min_diff = sys.maxsize
+            ce_25_strike = underlying_value
+            ce_25_last_price = 0
+
+            for index, row in expiry_option_chain.iterrows():
+                if row.delta is not None:
+                    delta_diff = abs(abs(row.delta) * 100 - 50.0)
+                    if delta_diff < atm_min_diff:
+                        atm_min_diff = delta_diff
+                        atm_strike = row.strikePrice
+                        atm_last_price = row.lastPrice
+                if row.delta is not None :
+                    if row.optiontype == PE:
+                        delta_diff = abs(abs(row.delta) * 100 - 25.0)
+                        if delta_diff < pe_25_min_dff:
+                            pe_25_min_dff = delta_diff
+                            pe_25_strike = row.strikePrice
+                            pe_25_last_price = row.lastPrice
+                    if row.optiontype == CE:
+                        delta_diff = abs(abs(row.delta) * 100 - 25.0)
+                        if delta_diff < ce_25_min_diff:
+                            ce_25_min_diff = delta_diff
+                            ce_25_strike = row.strikePrice
+                            ce_25_last_price = row.lastPrice
+
+            pe_strike_diff = abs(atm_strike - pe_25_strike)
+            pe_price_diff = abs(atm_last_price - pe_25_last_price)
+            ds_pe_profit = 0
+            if pe_price_diff != 0 and pe_strike_diff != 0:
+                ds_pe_profit = pe_price_diff/pe_strike_diff * 100
+
+            ce_strike_diff = abs(ce_25_strike - atm_strike)
+            ce_price_diff = abs(atm_last_price - ce_25_last_price)
+            ds_ce_profit = 0
+            if ce_price_diff != 0 and ce_strike_diff != 0:
+                ds_ce_profit = ce_price_diff/ce_strike_diff * 100
+
+            cursor.execute('''
+                INSERT INTO OPTION_ANALYSIS 
+                (date, symbol, expiry, ds_pe_profit, ds_ce_profit, ds_atm, ds_ce, ds_pe)  
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(date, symbol, expiry) DO UPDATE 
+                SET ds_pe_profit=?, ds_ce_profit=?, ds_atm=?, ds_ce=?, ds_pe=?
+                WHERE date=? AND symbol=? AND expiry=?''',
+                           (today, symbol, expiry_date,
+                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike,
+                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike,
+                            today, symbol, expiry_date))
+    connect.commit()
+    connect.close()
+
+
 # Main Code Starts Here
 # Buy at OTM
 # Shorts at ATM
@@ -252,6 +348,7 @@ def analyze_option_chain(symbol):
     hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
     iv_analysis(symbol, stock_price, hd_option_chain_df)
     pcr_analysis(symbol, hd_option_chain_df)
+    delta_strategy(symbol, hd_option_chain_df)
 
 
 derivative_equities = nse.list_of_derivatives()
