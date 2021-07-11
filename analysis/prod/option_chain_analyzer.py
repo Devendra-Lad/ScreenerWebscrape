@@ -325,9 +325,6 @@ def delta_strategy(symbol, hd_option_chain):
     connect.close()
 
 
-# Main Code Starts Here
-# Buy at OTM
-# Shorts at ATM
 def analyze_option_chain(symbol):
     today = datetime.strftime(datetime.now(pytz.timezone('Asia/Kolkata')), '%d-%m-%Y-%H')
     path = 'data/optionchain/' + today + '/' + symbol
@@ -355,6 +352,7 @@ def analyze_option_chain(symbol):
         analyze_option_chain(symbol)
 
 
+nse = NSE()
 derivative_equities = nse.list_of_derivatives()
 for symbol in derivative_equities:
     print("processing " + symbol)
