@@ -69,18 +69,18 @@ class NSE:
         try:
             return json.loads(self.fetch_data(url))
         except:
-            print('Retrying Index Chain Data ')
+            print('Failed to fetch Data ')
             print(symbol)
-            return self.fetch_index_chain_data(symbol)
+            raise RuntimeError('Failed to fetch data')
 
     def fetch_equity_chain_data(self, symbol):
         url = 'https://www.nseindia.com/api/option-chain-equities?symbol=' + quote(symbol)
         try:
             return json.loads(self.fetch_data(url))
         except:
-            print('Retrying Index Chain Data ')
+            print('Failed to fetch Data ')
             print(symbol)
-            return self.fetch_equity_chain_data(symbol)
+            raise RuntimeError('Failed to fetch data')
 
     @lru_cache
     def fetch_stock_quotes(self, symbol):

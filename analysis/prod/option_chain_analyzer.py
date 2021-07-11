@@ -59,8 +59,6 @@ MARKET_SENTIMENT = 'market_sentiment'
 pd.options.mode.chained_assignment = None
 pd.set_option('display.max_columns', 500)
 
-nse = NSE()
-
 
 def create_hd_option_chain_df(data):
     option_chain_df = pd.DataFrame()
@@ -339,16 +337,22 @@ def analyze_option_chain(symbol):
         os.mkdir('data/optionchain/' + today + '/' + symbol)
     if not os.path.exists('data/optionchain/' + today + '/' + symbol + '/sentiment'):
         os.mkdir('data/optionchain/' + today + '/' + symbol + '/sentiment')
-    if symbol in indices:
-        option_chain = nse.fetch_index_chain_data(symbol)
-    else:
-        option_chain = nse.fetch_equity_chain_data(symbol)
+    try:
+        nse = NSE()
+        if symbol in indices:
+            option_chain = nse.fetch_index_chain_data(symbol)
+        else:
+            option_chain = nse.fetch_equity_chain_data(symbol)
 
-    stock_price = option_chain['records']['underlyingValue']
-    hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
-    iv_analysis(symbol, stock_price, hd_option_chain_df)
-    pcr_analysis(symbol, hd_option_chain_df)
-    delta_strategy(symbol, hd_option_chain_df)
+        stock_price = option_chain['records']['underlyingValue']
+        hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
+        iv_analysis(symbol, stock_price, hd_option_chain_df)
+        pcr_analysis(symbol, hd_option_chain_df)
+        delta_strategy(symbol, hd_option_chain_df)
+    except Exception as e:
+        print("Re Processing " + symbol)
+        print(e)
+        analyze_option_chain(symbol)
 
 
 derivative_equities = nse.list_of_derivatives()
