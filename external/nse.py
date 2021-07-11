@@ -33,6 +33,7 @@ def clean_up_eq_bhav_copy(bhav_copy):
 
 def process_category_turnover_data(workbook: Book):
     sheet = workbook.sheet_by_index(0)
+
     return sheet.cell_value(3, 2) - sheet.cell_value(3, 3), \
            sheet.cell_value(4, 2) - sheet.cell_value(4, 3), \
            sheet.cell_value(5, 2) - sheet.cell_value(5, 3), \
@@ -202,9 +203,10 @@ class NSE:
                 csv_file.write(content)
                 csv_file.close()
                 return clean_up_eq_bhav_copy(pd.read_csv(file_local_url))
-        except:
+        except Exception as e:
             print('Bhav copy not available')
             print(url)
+            print(e)
             return self.fetch_eq_bhav_copy(days)
 
     def fetch_category_turnover_data(self, offset):
@@ -212,7 +214,7 @@ class NSE:
         category_date = today - timedelta(max(1, (today.weekday() + 6) % 7 - 3)) - BDay(1 + offset)
         category_turnover_date = category_date.strftime('%d%m%y')
         url = 'https://archives.nseindia.com/archives/equities/cat/cat_turnover_' + category_turnover_date + '.xls'
-        file_local_url = '../data/turnover_data/cash/' + category_turnover_date + '.xls'
+        file_local_url = 'data/turnover_data/cash/' + category_turnover_date + '.xls'
         if os.path.exists(file_local_url):
             bank, dfi, prop, retail = process_category_turnover_data(xlrd.open_workbook(file_local_url))
         else:
@@ -249,7 +251,6 @@ class NSE:
             csv_file.close()
             with open(file_local_url, newline='') as csvfile:
                 return category_date, [row for row in csv.reader(csvfile, delimiter=',', quotechar='|')]
-
 
     def list_of_equities(self):
         url = 'https://archives.nseindia.com/content/equities/EQUITY_L.csv'
