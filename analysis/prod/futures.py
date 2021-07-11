@@ -4,62 +4,7 @@ import sqlite3
 nse = NSE()
 
 connect = sqlite3.connect("data/database.db")
-
 cursor = connect.cursor()
-
-# cursor.execute('''DROP TABLE IF EXISTS FNO_CONSOLIDATED''')
-# cursor.execute('''CREATE TABLE FNO_CONSOLIDATED (
-# date TEXT,
-# fii_fi_long REAL NOT NULL,
-# fii_fi_short REAL NOT NULL,
-# fii_fi_r REAL NOT NULL,
-# fii_fs_long REAL NOT NULL,
-# fii_fs_short REAL NOT NULL,
-# fii_io_call_long REAL NOT NULL,
-# fii_io_put_long REAL NOT NULL,
-# fii_io_call_short REAL NOT NULL,
-# fii_io_put_short REAL NOT NULL,
-# fii_so_call_long REAL NOT NULL,
-# fii_so_put_long REAL NOT NULL,
-# fii_so_call_short REAL NOT NULL,
-# fii_so_put_short REAL NOT NULL,
-# dii_fi_long REAL NOT NULL,
-# dii_fi_short REAL NOT NULL,
-# dii_fs_long REAL NOT NULL,
-# dii_fs_short REAL NOT NULL,
-# dii_io_call_long REAL NOT NULL,
-# dii_io_put_long REAL NOT NULL,
-# dii_io_call_short REAL NOT NULL,
-# dii_io_put_short REAL NOT NULL,
-# dii_so_call_long REAL NOT NULL,
-# dii_so_put_long REAL NOT NULL,
-# dii_so_call_short REAL NOT NULL,
-# dii_so_put_short REAL NOT NULL,
-# client_fi_long REAL NOT NULL,
-# client_fi_short REAL NOT NULL,
-# client_fs_long REAL NOT NULL,
-# client_fs_short REAL NOT NULL,
-# client_io_call_long REAL NOT NULL,
-# client_io_put_long REAL NOT NULL,
-# client_io_call_short REAL NOT NULL,
-# client_io_put_short REAL NOT NULL,
-# client_so_call_long REAL NOT NULL,
-# client_so_put_long REAL NOT NULL,
-# client_so_call_short REAL NOT NULL,
-# client_so_put_short REAL NOT NULL,
-# pro_fi_long REAL NOT NULL,
-# pro_fi_short REAL NOT NULL,
-# pro_fs_long REAL NOT NULL,
-# pro_fs_short REAL NOT NULL,
-# pro_io_call_long REAL NOT NULL,
-# pro_io_put_long REAL NOT NULL,
-# pro_io_call_short REAL NOT NULL,
-# pro_io_put_short REAL NOT NULL,
-# pro_so_call_long REAL NOT NULL,
-# pro_so_put_long REAL NOT NULL,
-# pro_so_call_short REAL NOT NULL,
-# pro_so_put_short REAL NOT NULL,
-# PRIMARY KEY(date))''')
 
 try:
     date, data = nse.fetch_fno_oi_data_csv(0)
@@ -148,7 +93,7 @@ try:
     pro_so_call_short = pro[11]
     pro_so_put_short = pro[12]
 
-    formatted = date.strftime('%Y-%m-%d')
+    date_formatted = date.strftime('%Y-%m-%d')
     cursor.execute('''
     INSERT INTO FNO_CONSOLIDATED(
         date,
@@ -203,7 +148,7 @@ try:
         pro_so_put_short)  
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                   (formatted,
+                   (date_formatted,
                     fii_fi_long,
                     fii_fi_short,
                     fii_fi_r,
@@ -253,7 +198,15 @@ try:
                     pro_so_put_long,
                     pro_so_call_short,
                     pro_so_put_short))
+
+    cursor.execute('''
+    INSERT INTO THOUSANDFEET(date, fii_fi_r) 
+    values (?, ?) ON CONFLICT(date)
+    DO UPDATE SET fii_fi_r=?
+    WHERE date=?''', (date_formatted, format(fii_fi_r, '.2f'), format(fii_fi_r, '.2f'), date_formatted))
+
 except Exception as e:
     print(e)
+
 connect.commit()
 connect.close()

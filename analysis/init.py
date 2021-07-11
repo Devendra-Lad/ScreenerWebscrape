@@ -55,3 +55,61 @@ cursor.execute('''
 ''')
 connect.commit()
 connect.close()
+
+connect = sqlite3.connect("data/database.db")
+cursor = connect.cursor()
+cursor.execute('''DROP TABLE IF EXISTS FNO_CONSOLIDATED''')
+cursor.execute('''CREATE TABLE FNO_CONSOLIDATED (
+date TEXT,
+fii_fi_long REAL NOT NULL,
+fii_fi_short REAL NOT NULL,
+fii_fi_r REAL NOT NULL,
+fii_fs_long REAL NOT NULL,
+fii_fs_short REAL NOT NULL,
+fii_io_call_long REAL NOT NULL,
+fii_io_put_long REAL NOT NULL,
+fii_io_call_short REAL NOT NULL,
+fii_io_put_short REAL NOT NULL,
+fii_so_call_long REAL NOT NULL,
+fii_so_put_long REAL NOT NULL,
+fii_so_call_short REAL NOT NULL,
+fii_so_put_short REAL NOT NULL,
+dii_fi_long REAL NOT NULL,
+dii_fi_short REAL NOT NULL,
+dii_fs_long REAL NOT NULL,
+dii_fs_short REAL NOT NULL,
+dii_io_call_long REAL NOT NULL,
+dii_io_put_long REAL NOT NULL,
+dii_io_call_short REAL NOT NULL,
+dii_io_put_short REAL NOT NULL,
+dii_so_call_long REAL NOT NULL,
+dii_so_put_long REAL NOT NULL,
+dii_so_call_short REAL NOT NULL,
+dii_so_put_short REAL NOT NULL,
+client_fi_long REAL NOT NULL,
+client_fi_short REAL NOT NULL,
+client_fs_long REAL NOT NULL,
+client_fs_short REAL NOT NULL,
+client_io_call_long REAL NOT NULL,
+client_io_put_long REAL NOT NULL,
+client_io_call_short REAL NOT NULL,
+client_io_put_short REAL NOT NULL,
+client_so_call_long REAL NOT NULL,
+client_so_put_long REAL NOT NULL,
+client_so_call_short REAL NOT NULL,
+client_so_put_short REAL NOT NULL,
+pro_fi_long REAL NOT NULL,
+pro_fi_short REAL NOT NULL,
+pro_fs_long REAL NOT NULL,
+pro_fs_short REAL NOT NULL,
+pro_io_call_long REAL NOT NULL,
+pro_io_put_long REAL NOT NULL,
+pro_io_call_short REAL NOT NULL,
+pro_io_put_short REAL NOT NULL,
+pro_so_call_long REAL NOT NULL,
+pro_so_put_long REAL NOT NULL,
+pro_so_call_short REAL NOT NULL,
+pro_so_put_short REAL NOT NULL,
+PRIMARY KEY(date))''')
+connect.commit()
+connect.close()

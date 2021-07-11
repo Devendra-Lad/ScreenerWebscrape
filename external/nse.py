@@ -240,7 +240,7 @@ class NSE:
         category_date = today - timedelta(max(1, (today.weekday() + 6) % 7 - 3)) - BDay(offset)
         category_turnover_date = category_date.strftime('%d%m%Y')
         url = 'https://archives.nseindia.com/content/nsccl/fao_participant_oi_' + category_turnover_date + '.csv'
-        file_local_url = '../data/turnover_data/fno/' + category_turnover_date + '.csv'
+        file_local_url = 'data/turnover_data/fno/' + category_turnover_date + '.csv'
         if os.path.exists(file_local_url):
             with open(file_local_url, newline='') as csvfile:
                 return category_date, [row for row in csv.reader(csvfile, delimiter=',', quotechar='|')]

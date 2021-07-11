@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from pandas.tseries.offsets import BDay
 import pytz
 
-
 import pandas as pd
 
 from external.nsdl import NSDL
@@ -12,7 +11,7 @@ pd.options.mode.chained_assignment = None
 pd.set_option('display.max_columns', 500)
 
 connect = sqlite3.connect("data/database.db")
-fii_date, fii  = NSDL().fetch_latest_fii_investment()
+fii_date, fii = NSDL().fetch_latest_fii_investment()
 
 c = connect.cursor()
 c.execute("INSERT INTO THOUSANDFEET (date, fii) VALUES (?, ?) "
@@ -20,7 +19,6 @@ c.execute("INSERT INTO THOUSANDFEET (date, fii) VALUES (?, ?) "
           (fii_date.date(), fii, fii, fii_date.date()))
 c.close()
 connect.commit()
-
 
 c = connect.cursor()
 today = datetime.now(tz=pytz.timezone('Asia/Kolkata')).date()
@@ -38,9 +36,11 @@ for row in rows:
 ema = total_investment / number_of_fii_days
 
 c = connect.cursor()
-c.execute("INSERT INTO THOUSANDFEET (date, fii_ema) VALUES (?, ?) "
-          "ON CONFLICT(date) DO UPDATE SET fii_ema=? WHERE date=?",
-          (fii_date.date(), ema, ema, fii_date.date()))
+c.execute('''INSERT INTO THOUSANDFEET (date, fii_ema) 
+            VALUES (?, ?) 
+            ON CONFLICT(date) 
+            DO UPDATE SET fii_ema=? 
+            WHERE date=?''', (fii_date.date(), format(ema, '.2f'), format(ema, '.2f'), fii_date.date()))
 c.close()
 connect.commit()
 
