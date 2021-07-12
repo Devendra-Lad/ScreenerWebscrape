@@ -373,16 +373,16 @@ def analyze_option_chain(symbol):
         hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
         iv_analysis(symbol, stock_price, hd_option_chain_df)
         pcr_analysis(symbol, hd_option_chain_df)
-        # delta_strategy(symbol, hd_option_chain_df)
+        delta_strategy(symbol, hd_option_chain_df)
     except Exception as e:
         raise e
 
-# nse = NSE()
-# derivative_equities = nse.list_of_derivatives()
-# for symbol in derivative_equities:
-#     print("processing " + symbol)
-#     analyze_option_chain(symbol)
+
+nse = NSE()
+derivative_equities = nse.list_of_derivatives()
+for symbol in derivative_equities:
+    print("processing " + symbol)
+    analyze_option_chain(symbol)
 
 # TODO Thousand Feet View for NIFTY Options
-
-analyze_option_chain('NIFTY')
+# analyze_option_chain('M&MFIN')
