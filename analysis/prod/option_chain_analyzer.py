@@ -11,6 +11,10 @@ from scipy.stats import norm
 
 from external.nse import NSE
 
+from analysis.utils.timeutils import TimeUtils
+
+timeutils = TimeUtils()
+
 OUT_DATE_FORMAT = '%d-%b-%Y'
 ASIA_KOLKATA = 'Asia/Kolkata'
 
@@ -160,7 +164,6 @@ def iv_analysis(symbol, stock_price, option_chain_df):
     connect = sqlite3.connect("data/database.db")
     cursor = connect.cursor()
     expiries = option_chain_df.expiryDate.unique()
-    iv_expiry_wise_analysis_df = pd.DataFrame()
     for expiry in expiries:
         expiry_date = datetime.strftime(datetime.strptime(expiry, '%d-%b-%Y'), '%Y-%m-%d')
         analyze_df = option_chain_df.copy()
@@ -226,6 +229,31 @@ def iv_analysis(symbol, stock_price, option_chain_df):
                             stock_price, market_sentiment, max_oi_ce_strike, max_oi_pe_strike, ce_win_prob_cdf,
                             pe_win_prob_cdf, ce_optimal_iv, pe_optimal_iv,
                             today, symbol, expiry_date))
+            #   TODO Move Thousand Feet view to common Method
+            if symbol == 'NIFTY':
+                thousand_feet_date = timeutils.getLastWorkingDay()
+                next_expiry_date = timeutils.getOptimalWeeklyExpiry()
+                thousand_feet_date_str = timeutils.getUnifiedFormatedDateStr(thousand_feet_date)
+                next_expiry_date_str = timeutils.getUnifiedFormatedDateStr(next_expiry_date)
+                if expiry_date == next_expiry_date_str:
+                    ne_ul = str(max_oi_ce_strike) + '-' + str(max_oi_pe_strike)
+                    cursor.execute('''
+                        INSERT INTO THOUSANDFEET(date, ne_iv, ne_ul) VALUES(?, ?, ?) 
+                        ON CONFLICT(date) DO UPDATE
+                        SET ne_iv=?, ne_ul=? 
+                        WHERE date=? 
+                    ''', (thousand_feet_date_str, market_sentiment, ne_ul, market_sentiment, ne_ul, thousand_feet_date_str))
+                optimal_monthly_expiry = timeutils.getOptimalMonthlyExpiry()
+                optimal_monthly_expiry_str = timeutils.getUnifiedFormatedDateStr(optimal_monthly_expiry)
+                if expiry_date == optimal_monthly_expiry_str:
+                    me_ul = str(max_oi_ce_strike) + '-' + str(max_oi_pe_strike)
+                    cursor.execute('''
+                        INSERT INTO THOUSANDFEET(date, me_iv, me_ul) VALUES(?, ?, ?) 
+                        ON CONFLICT(date) DO UPDATE
+                        SET me_iv=?, me_ul=? 
+                        WHERE date=? 
+                    ''', (thousand_feet_date_str, market_sentiment, me_ul, market_sentiment, me_ul, thousand_feet_date_str))
+
     connect.commit()
     connect.close()
 
@@ -345,17 +373,16 @@ def analyze_option_chain(symbol):
         hd_option_chain_df = create_hd_option_chain_df(option_chain['records']['data'])
         iv_analysis(symbol, stock_price, hd_option_chain_df)
         pcr_analysis(symbol, hd_option_chain_df)
-        delta_strategy(symbol, hd_option_chain_df)
+        # delta_strategy(symbol, hd_option_chain_df)
     except Exception as e:
-        print("Re Processing " + symbol)
-        print(e)
-        analyze_option_chain(symbol)
+        raise e
 
-
-nse = NSE()
-derivative_equities = nse.list_of_derivatives()
-for symbol in derivative_equities:
-    print("processing " + symbol)
-    analyze_option_chain(symbol)
+# nse = NSE()
+# derivative_equities = nse.list_of_derivatives()
+# for symbol in derivative_equities:
+#     print("processing " + symbol)
+#     analyze_option_chain(symbol)
 
 # TODO Thousand Feet View for NIFTY Options
+
+analyze_option_chain('NIFTY')
