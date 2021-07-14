@@ -120,6 +120,27 @@ def pcr_analysis(symbol, option_chain_df):
                             pe_ce_ratio, view,
                             pe_ce_ratio, view,
                             today, symbol, expiry_date))
+            if symbol == 'NIFTY':
+                thousand_feet_date_str = timeutils.getUnifiedFormatedDateStr(timeutils.getLastWorkingDay())
+                next_expiry_date_str = timeutils.getUnifiedFormatedDateStr(timeutils.getOptimalWeeklyExpiry())
+                monthly_expiry_date_str = timeutils.getUnifiedFormatedDateStr(timeutils.getOptimalMonthlyExpiry())
+                if expiry_date == next_expiry_date_str:
+                    cursor.execute('''
+                        INSERT INTO THOUSANDFEET 
+                        (date, npcr)  
+                        VALUES (?, ?)
+                        ON CONFLICT(date) DO UPDATE 
+                        SET npcr=?
+                        WHERE date=? ''',
+                                   (thousand_feet_date_str, view, view, thousand_feet_date_str))
+                if expiry_date == monthly_expiry_date_str:
+                    cursor.execute('''
+                        INSERT INTO THOUSANDFEET 
+                        (date, mpcr)  
+                        VALUES (?, ?)
+                        ON CONFLICT(date) DO UPDATE 
+                        SET mpcr=?
+                        WHERE date=? ''', (thousand_feet_date_str, view, view, thousand_feet_date_str))
     connect.commit()
     connect.close()
 
@@ -236,43 +257,54 @@ def iv_analysis(symbol, stock_price, option_chain_df):
                 thousand_feet_date_str = timeutils.getUnifiedFormatedDateStr(thousand_feet_date)
                 next_expiry_date_str = timeutils.getUnifiedFormatedDateStr(next_expiry_date)
                 if expiry_date == next_expiry_date_str:
-                    ne_ul = str(max_oi_ce_strike) + '-' + str(max_oi_pe_strike)
+                    ne_lu = str(max_oi_pe_strike) + '-' + str(max_oi_ce_strike)
                     cursor.execute('''
-                        INSERT INTO THOUSANDFEET(date, ne_iv, ne_ul) VALUES(?, ?, ?) 
+                        INSERT INTO THOUSANDFEET(date, ne_iv, ne_lu) VALUES(?, ?, ?) 
                         ON CONFLICT(date) DO UPDATE
-                        SET ne_iv=?, ne_ul=? 
+                        SET ne_iv=?, ne_lu=? 
                         WHERE date=? 
-                    ''', (thousand_feet_date_str, market_sentiment, ne_ul, market_sentiment, ne_ul, thousand_feet_date_str))
+                    ''', (
+                        thousand_feet_date_str, market_sentiment, ne_lu, market_sentiment, ne_lu,
+                        thousand_feet_date_str))
                 optimal_monthly_expiry = timeutils.getOptimalMonthlyExpiry()
                 optimal_monthly_expiry_str = timeutils.getUnifiedFormatedDateStr(optimal_monthly_expiry)
                 if expiry_date == optimal_monthly_expiry_str:
-                    me_ul = str(max_oi_ce_strike) + '-' + str(max_oi_pe_strike)
+                    me_lu = str(max_oi_pe_strike) + '-' + str(max_oi_ce_strike)
                     cursor.execute('''
-                        INSERT INTO THOUSANDFEET(date, me_iv, me_ul) VALUES(?, ?, ?) 
+                        INSERT INTO THOUSANDFEET(date, me_iv, me_lu) VALUES(?, ?, ?) 
                         ON CONFLICT(date) DO UPDATE
-                        SET me_iv=?, me_ul=? 
+                        SET me_iv=?, me_lu=? 
                         WHERE date=? 
-                    ''', (thousand_feet_date_str, market_sentiment, me_ul, market_sentiment, me_ul, thousand_feet_date_str))
+                    ''', (
+                        thousand_feet_date_str, market_sentiment, me_lu, market_sentiment, me_lu,
+                        thousand_feet_date_str))
 
     connect.commit()
     connect.close()
 
 
 def delta_calculation(option_chain_row, underlyingValue, interest_rate, time_till_expiry):
+    volatility = 0
     if option_chain_row.optiontype == PE:
         volatility = mibian.BS(
             [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
             putPrice=option_chain_row.lastPrice).impliedVolatility
-        return mibian.BS(
+        delta = mibian.BS(
             [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
             volatility).putDelta
     else:
         volatility = mibian.BS(
             [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
             callPrice=option_chain_row.lastPrice).impliedVolatility
-        return mibian.BS(
+        delta = mibian.BS(
             [underlyingValue, option_chain_row.strikePrice, interest_rate, time_till_expiry],
             volatility).callDelta
+    option_chain_row['delta'] = delta
+    if volatility is not None:
+        option_chain_row['volatility'] = format(volatility, '.2f')
+    else:
+        option_chain_row['volatility'] = 0
+    return option_chain_row
 
 
 def delta_strategy(symbol, hd_option_chain):
@@ -290,12 +322,13 @@ def delta_strategy(symbol, hd_option_chain):
         if expiry_datetime <= end_expiry_date:
             time_till_expiry = (expiry_datetime - today_datetime).total_seconds() / (60 * 60 * 24)
             expiry_option_chain = hd_option_chain.loc[hd_option_chain.expiryDate == expiry]
-            expiry_option_chain['delta'] = expiry_option_chain.apply(
+            expiry_option_chain = expiry_option_chain.apply(
                 lambda row: delta_calculation(row, underlying_value, interest_rate, time_till_expiry), axis=1)
 
             atm_min_diff = sys.maxsize
             atm_strike = underlying_value
             atm_last_price = 0
+            atm_iv = 0
 
             pe_25_min_dff = sys.maxsize
             pe_25_strike = underlying_value
@@ -312,6 +345,7 @@ def delta_strategy(symbol, hd_option_chain):
                         atm_min_diff = delta_diff
                         atm_strike = row.strikePrice
                         atm_last_price = row.lastPrice
+                        atm_iv = row.volatility
                 if row.delta is not None:
                     if row.optiontype == PE:
                         delta_diff = abs(abs(row.delta) * 100 - 25.0)
@@ -340,14 +374,14 @@ def delta_strategy(symbol, hd_option_chain):
 
             cursor.execute('''
                 INSERT INTO OPTION_ANALYSIS 
-                (date, symbol, expiry, ds_pe_profit, ds_ce_profit, ds_atm, ds_ce, ds_pe)  
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (date, symbol, expiry, ds_pe_profit, ds_ce_profit, ds_atm, ds_ce, ds_pe, iv)  
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(date, symbol, expiry) DO UPDATE 
-                SET ds_pe_profit=?, ds_ce_profit=?, ds_atm=?, ds_ce=?, ds_pe=?
+                SET ds_pe_profit=?, ds_ce_profit=?, ds_atm=?, ds_ce=?, ds_pe=?, iv=?
                 WHERE date=? AND symbol=? AND expiry=?''',
                            (today, symbol, expiry_date,
-                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike,
-                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike,
+                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike, atm_iv,
+                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike, atm_iv,
                             today, symbol, expiry_date))
     connect.commit()
     connect.close()
@@ -384,5 +418,6 @@ for symbol in derivative_equities:
     print("processing " + symbol)
     analyze_option_chain(symbol)
 
-# TODO Thousand Feet View for NIFTY Options
-# analyze_option_chain('M&MFIN')
+# TODO Add Option Volume Data
+# TODO Calculate Probability of profit
+# analyze_option_chain('NIFTY')
