@@ -51,3 +51,6 @@ class TimeUtils:
                         monthly_expiry_day = day_itr
                     day_itr += timedelta(days=1)
         return monthly_expiry_day.date()
+
+    def getToday(self):
+        return datetime.now(pytz.timezone('Asia/Kolkata'))

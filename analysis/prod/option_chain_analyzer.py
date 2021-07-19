@@ -10,6 +10,9 @@ import pytz
 from scipy.stats import norm
 
 from external.nse import NSE
+from analysis.utils.number_utils import NumberUtils
+
+nullOrDefault = NumberUtils.nullOrDefault
 
 from analysis.utils.timeutils import TimeUtils
 
@@ -324,7 +327,7 @@ def delta_strategy(symbol, hd_option_chain):
             expiry_option_chain = hd_option_chain.loc[hd_option_chain.expiryDate == expiry]
             expiry_option_chain = expiry_option_chain.apply(
                 lambda row: delta_calculation(row, underlying_value, interest_rate, time_till_expiry), axis=1)
-
+            volume_sum = expiry_option_chain['totalTradedVolume'].sum()
             atm_min_diff = sys.maxsize
             atm_strike = underlying_value
             atm_last_price = 0
@@ -346,6 +349,8 @@ def delta_strategy(symbol, hd_option_chain):
                         atm_strike = row.strikePrice
                         atm_last_price = row.lastPrice
                         atm_iv = row.volatility
+                        atm_spread = format(abs(nullOrDefault(row.bidprice, 0) - nullOrDefault(row.askPrice, 0)), '0.3f')
+                        atm_oi = nullOrDefault(row.openInterest, 0)
                 if row.delta is not None:
                     if row.optiontype == PE:
                         delta_diff = abs(abs(row.delta) * 100 - 25.0)
@@ -374,14 +379,14 @@ def delta_strategy(symbol, hd_option_chain):
 
             cursor.execute('''
                 INSERT INTO OPTION_ANALYSIS 
-                (date, symbol, expiry, ds_pe_profit, ds_ce_profit, ds_atm, ds_ce, ds_pe, iv)  
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (date, symbol, expiry, ds_pe_profit, ds_ce_profit, ds_atm, ds_ce, ds_pe, iv, volume, spread, oi)  
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(date, symbol, expiry) DO UPDATE 
-                SET ds_pe_profit=?, ds_ce_profit=?, ds_atm=?, ds_ce=?, ds_pe=?, iv=?
+                SET ds_pe_profit=?, ds_ce_profit=?, ds_atm=?, ds_ce=?, ds_pe=?, iv=?, volume=?, spread=?, oi=?
                 WHERE date=? AND symbol=? AND expiry=?''',
                            (today, symbol, expiry_date,
-                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike, atm_iv,
-                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike, atm_iv,
+                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike, atm_iv, volume_sum, atm_spread, atm_oi,
+                            ds_pe_profit, ds_ce_profit, atm_strike, ce_25_strike, pe_25_strike, atm_iv, volume_sum, atm_spread, atm_oi,
                             today, symbol, expiry_date))
     connect.commit()
     connect.close()
@@ -420,4 +425,4 @@ for symbol in derivative_equities:
 
 # TODO Add Option Volume Data
 # TODO Calculate Probability of profit
-# analyze_option_chain('NIFTY')
+# analyze_option_chain('M&M')
